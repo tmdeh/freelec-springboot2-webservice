@@ -1,9 +1,10 @@
-package com.jojoldu.book.springboot.web;
+package com.jojoldu.book.springboot.domain.web;
 
 import com.jojoldu.book.springboot.domain.posts.Posts;
 import com.jojoldu.book.springboot.domain.posts.PostsRepository;
-import com.jojoldu.book.springboot.web.dto.PostsSaveRequestDto;
-import com.jojoldu.book.springboot.web.dto.PostsUpadateRequestDto;
+import com.jojoldu.book.springboot.dto.PostsSaveRequestDto;
+import com.jojoldu.book.springboot.dto.PostsUpdateRequestDto;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,9 +18,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
-import  static  org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -54,9 +56,6 @@ public class PostsApiControllerTest {
         ResponseEntity<Long> responseEntity = restTemplate.postForEntity(url, requestDto, Long.class);
 
         //then
-        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(responseEntity.getBody()).isGreaterThan(0L);
-
         List<Posts> all = postsRepository.findAll();
         assertThat(all.get(0).getTitle()).isEqualTo(title);
         assertThat(all.get(0).getContent()).isEqualTo(content);
@@ -71,30 +70,54 @@ public class PostsApiControllerTest {
                 .author("author")
                 .build());
 
-        Long UpdateId = savedPosts.getId();
-        String expectedTitle = "title2";
-        String expectedContent = "content2";
+        Long updateId = savedPosts.getId();
 
-        PostsUpadateRequestDto requestDto = PostsUpadateRequestDto.builder()
-                .title(expectedTitle)
-                .content(expectedContent)
+        String expactedTitle = "title2";
+        String expactedContent = "content2";
+
+        PostsUpdateRequestDto requestDto = PostsUpdateRequestDto.builder()
+                .title(expactedTitle)
+                .content(expactedContent)
                 .build();
 
-        String url = "http://localhost:" + port + "/api/v1/posts/" + UpdateId;
+        String url = "http://localhost:" + port + "/api/v1/posts/" + updateId;
 
+        HttpEntity<PostsUpdateRequestDto> requestEntity = new HttpEntity<>(requestDto);
 
-        HttpEntity<PostsUpadateRequestDto> requestEntity = new HttpEntity<>(requestDto);
 
         //when
         ResponseEntity<Long> responseEntity = restTemplate.exchange(url, HttpMethod.PUT,
                 requestEntity, Long.class);
-
         //then
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(responseEntity.getBody()).isGreaterThan(0L);
-        List<Posts> all = postsRepository.findAll();
-        assertThat(all.get(0).getTitle()).isEqualTo(expectedTitle);
-        assertThat(all.get(0).getContent()).isEqualTo(expectedContent);
 
+        assertThat(responseEntity.getBody()).isGreaterThan(0L);
+
+        List<Posts> all = postsRepository.findAll();
+        assertThat(all.get(0).getTitle()).isEqualTo(expactedTitle);
+
+        assertThat(all.get(0).getContent()).isEqualTo(expactedContent);
+    }
+
+    @Test
+    public void BaseTimeEntity_등록() {
+        //given
+        LocalDateTime now = LocalDateTime.of(2019,6,4,0,0,0);
+        postsRepository.save(Posts.builder()
+                .title("title")
+                .content("content")
+                .author("author")
+                .build());
+
+        //when
+        List<Posts> postsList = postsRepository.findAll();
+
+        //then
+        Posts posts = postsList.get(0);
+
+        System.out.println(">>>>>> createDate=" + posts.getCreateDate()+", modifiedDate="+posts.getModifiDate());
+
+        assertThat(posts.getCreateDate()).isAfter(now);
+        assertThat(posts.getModifiDate()).isAfter(now);
     }
 }
